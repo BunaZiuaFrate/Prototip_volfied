@@ -1,5 +1,7 @@
 # Prototip_volfied
 
+# Proiectul va fi o interpretare a jocului clasic volfied. Acesta va include nivele generate aleatoriu automat si diversi inamici ce pot afecta jucatorul care are un set simplu de miscari. Scopul este de a termina fiecare nivel cu punctaj maxim.
+
 ### Folosiți template-ul corespunzător grupei voastre!
 
 | Laborant  | Link template                                |
