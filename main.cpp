@@ -126,6 +126,24 @@ class Level {
 
 };
 
+class Grid {
+    Position LD;
+    Position RD;
+    Position LU;
+    Position RU;
+    public:
+    Grid() {
+        LD.x=0;
+        LD.y=0;
+        RD.x=400;
+        RD.y=0;
+        LU.x=0;
+        LU.y=200;
+        RU.x=400;
+        RU.y=200;
+    }
+};
+
 class GameState {
     Player mainPlayer;
     Score currentScore;
