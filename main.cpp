@@ -52,7 +52,7 @@ class Player {
     }
 
     friend std::ostream& operator<<(std::ostream &os, const Player & X) {
-        os << X.color << X.speed << X.color;
+        os << X.color << X.speed;
         return os;
     }
 
@@ -71,6 +71,10 @@ class Score {
         this->global_score = global_score;
     }
 
+    void setscore(int level_score) {
+        this->level_score = level_score;
+    }
+
     void addscore(int level_score) {
         global_score += level_score;
     }
@@ -83,7 +87,7 @@ class Score {
     Score& operator=(Score& scor_vechi);
 
     friend std::ostream& operator<<(std::ostream &os, const Score & X) {
-        os << X.level_score << X.global_score;
+        os << X.level_score << " " << X.global_score;
         return os;
     }
 
@@ -108,12 +112,13 @@ class Level {
 
     public:
     Level() {}
-    Level(int level_number) {
+    Level(int level_number, int difficulty) {
         this->level_number = level_number;
+        this->difficulty = difficulty;
     }
 
     friend std::ostream& operator<<(std::ostream &os, const Level& X) {
-        os << X.level_number << X.difficulty;
+        os << X.level_number << " " <<X.difficulty;
         return os;
     }
 
@@ -149,6 +154,14 @@ void Update() {
 }
 
 int main() {
+    Player p1(100, 'G');
+    Score s1(0);
+    Level l1(1, 0);
+    s1.setscore(0);
+    bool gameIsRunning = true;
+    int frame = 0;
+    GameState joculMeu(p1, s1, l1);
+    std::cout<<joculMeu<<std::endl;
     Level *current_level=nullptr;
     Score *current_score=nullptr;
     for (int level=1; level<=9; level++) {
@@ -157,7 +170,7 @@ int main() {
             std::cout<<"Problema la alocare";
             return -1;
         }
-        try {current_level = new Level(level);}
+        try {current_level = new Level(level, level*2);}
         catch (std::bad_alloc xa){
             std::cout<<"Problema la alocare";
             return -1;
