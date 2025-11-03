@@ -172,6 +172,7 @@ void Update() {
 }
 
 int main() {
+    Grid g1;
     Player p1(100, 'G');
     Score s1(0);
     Level l1(1, 0);
