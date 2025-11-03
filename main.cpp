@@ -172,11 +172,12 @@ void Update() {
 }
 
 int main() {
-    Grid g1, g2, g3, g4, g5;
+    Grid g1;
     Player p1(100, 'G');
-    Score s1(0);
+    Score s1(0), s2(1000);
     Level l1(1, 0);
     s1.setscore(0);
+    s2 = s1;
     bool gameIsRunning = true;
     int frame = 0;
     GameState joculMeu(p1, s1, l1);
