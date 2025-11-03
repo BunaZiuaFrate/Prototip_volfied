@@ -1,26 +1,25 @@
-name: C++ CI (CMake)
+name: Build and Test C++ Project
 
 on:
   push:
-    branches: [ main, master ]
+    branches: [ main ]
   pull_request:
-    branches: [ main, master ]
+    branches: [ main ]
 
 jobs:
   build:
     runs-on: ubuntu-latest
 
     steps:
-      - name: 1. Preluare cod (Checkout)
-        uses: actions/checkout@v3
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-      - name: 2. Instalare dependențe (OpenGL etc.)
+      - name: Install dependencies
+        run: sudo apt-get install -y g++
+
+      - name: Build project
         run: |
-          sudo apt-get update
-          sudo apt-get install -y build-essential libgl1-mesa-dev libglu1-mesa-dev libx11-dev libxrandr-dev libxext-dev libxfixes-dev libxi-dev
+          g++ -std=c++17 -Wall -Wextra -o game main.cpp
 
-      - name: 3. Configurare CMake (Pasul 1 din imaginea ta)
-        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Debug
-
-      - name: 4. Compilare CMake (Pasul 2 din imaginea ta)
-        run: cmake --build build --config Debug --parallel 6
+      - name: Run program
+        run: ./game
