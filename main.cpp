@@ -4,6 +4,7 @@
 #include <exception>
 #include <algorithm> // Pentru std::swap
 #include <cstdlib>   // Pentru rand()
+#include <ctime>     // Pentru time()
 
 // ==========================================
 // 0. STRUCTURI UTILITARE
@@ -22,7 +23,9 @@ class GameException : public std::exception {
 protected:
     std::string message;
 public:
-    GameException(const std::string& msg) : message(msg) {}
+    explicit GameException(const std::string& msg) : message(msg) {}
+
+    // Funcție virtuală din std::exception
     virtual const char* what() const noexcept override {
         return message.c_str();
     }
@@ -30,7 +33,7 @@ public:
 
 class OutOfBoundsException : public GameException {
 public:
-    OutOfBoundsException(const std::string& name)
+    explicit OutOfBoundsException(const std::string& name)
         : GameException("CRITIC: " + name + " a incercat sa paraseasca harta!") {}
 };
 
@@ -63,9 +66,11 @@ public:
     // [VIRTUAL PUR] Metode ce trebuie implementate de clasele derivate
     virtual void update() = 0;
     virtual void printInfo(std::ostream& os) const = 0;
-    virtual Entity* clone() const = 0; // Pentru Deep Copy
 
-    // Getteri comuni
+    // [VIRTUAL] Clone pattern pentru Deep Copy
+    virtual Entity* clone() const = 0;
+
+    // Getteri comuni (de nivel înalt)
     std::string getName() const { return name; }
     int getX() const { return x; }
     int getY() const { return y; }
@@ -73,7 +78,7 @@ public:
     // Metodă statică
     static int getCount() { return entityCount; }
 
-    // Operator << polimorfic
+    // Operator << polimorfic (apelează funcția virtuală printInfo)
     friend std::ostream& operator<<(std::ostream& os, const Entity& e) {
         e.printInfo(os);
         return os;
@@ -100,7 +105,7 @@ public:
         x += dx;
         y += dy;
 
-        // Verificare limite hartă (Aruncă excepție)
+        // Verificare limite hartă (Aruncă excepție proprie)
         if (x < 0 || x > 100 || y < 0 || y > 100) {
             throw OutOfBoundsException(name);
         }
@@ -109,13 +114,13 @@ public:
 
     void addScore(int points) { score += points; }
 
-    // Funcție specifică pentru RTTI
+    // Funcție specifică pentru a testa RTTI (dynamic_cast)
     void heal() {
         health = 100;
         std::cout << " -> " << name << " a folosit o potiune! HP Full.\n";
     }
 
-    // [FIX] Getter-ul care lipsea și cauza eroarea
+    // [FIX] Getter-ul necesar pentru logica din main
     Position getPosition() const {
         return {x, y};
     }
@@ -136,8 +141,12 @@ public:
 
     void update() override {
         // AI Simplu: se mișcă random
-        x += (rand() % 3) - 1;
-        y += (rand() % 3) - 1;
+        int dx = (rand() % 3) - 1;
+        int dy = (rand() % 3) - 1;
+
+        // Verificăm să nu iasă din hartă (fără excepții la inamici, doar stau pe loc)
+        if (x + dx >= 0 && x + dx <= 100) x += dx;
+        if (y + dy >= 0 && y + dy <= 100) y += dy;
     }
 
     void printInfo(std::ostream& os) const override {
@@ -163,10 +172,11 @@ public:
 };
 
 // ==========================================
-// 3. MANAGER (LEVEL) - GESTIUNE MEMORIE
+// 3. MANAGER (LEVEL) - GESTIUNE MEMORIE & VECTOR POLIMORFIC
 // ==========================================
 class LevelManager {
     // Vector polimorfic (ține pointeri la Entity)
+    // Aceasta este "Clasa cu atribut de tip pointer la o clasă de bază"
     std::vector<Entity*> entities;
 
 public:
@@ -183,13 +193,15 @@ public:
     // 2. Constructor de Copiere (Deep Copy)
     LevelManager(const LevelManager& other) {
         for (const auto& e : other.entities) {
-            entities.push_back(e->clone()); // Folosește clone() virtual
+            // Aici apelăm constructorul virtual clone()
+            entities.push_back(e->clone());
         }
         std::cout << "[DEBUG] LevelManager copiat (Deep Copy).\n";
     }
 
     // 3. Operator de Atribuire
     LevelManager& operator=(LevelManager other) {
+        // Swap face schimb de pointeri între obiectul curent și copia temporară 'other'
         std::swap(entities, other.entities);
         return *this;
     }
@@ -200,14 +212,14 @@ public:
     }
 
     void updateAll() {
-        std::cout << "\n--- Update Frame ---\n";
+        std::cout << "\n--- Update Frame (Polimorfism) ---\n";
         for (auto e : entities) {
-            e->update(); // Apel polimorfic
+            e->update(); // Apel polimorfic (Virtual Function)
             std::cout << *e << "\n";
         }
     }
 
-    // Funcție care folosește RTTI (dynamic_cast)
+    // Funcție care folosește RTTI (dynamic_cast) pentru Downcast cu sens
     Player* getPlayer() {
         for (auto e : entities) {
             // Încercăm să convertim entitatea în Player
@@ -216,6 +228,11 @@ public:
             }
         }
         return nullptr;
+    }
+
+    // Funcție care folosește const correctness
+    int getEntityCount() const {
+        return entities.size();
     }
 };
 
@@ -228,8 +245,10 @@ class GameApp {
 
 public:
     GameApp() : isRunning(true) {
-        // Initializare nivel cu diverse entități
-        level.addEntity(new Player("Hero", 50, 50)); // Start la 50,50 (centru)
+        srand(time(nullptr)); // Seed pentru random
+
+        // Initializare nivel cu diverse entități (Polimorfism la inserare)
+        level.addEntity(new Player("Hero", 50, 50));
         level.addEntity(new Enemy("Sparx", 10, 10, 20));
         level.addEntity(new Enemy("Qix", 80, 80, 50));
         level.addEntity(new Obstacle(20, 20, false));
@@ -242,14 +261,14 @@ public:
         std::cout << "1. Misca Player (W/A/S/D)\n";
         std::cout << "2. Asteapta o tura\n";
         std::cout << "3. Foloseste Potiune (Heal)\n";
-        std::cout << "4. Salveaza Jocul (Test Copy)\n";
+        std::cout << "4. Salveaza Jocul (Test Copy Constructor)\n";
         std::cout << "5. Testeaza Eroare Critica (Out of Bounds)\n";
         std::cout << "0. Iesire\n";
         std::cout << "Comanda ta: ";
     }
 
     void run() {
-        std::cout << "Entitati initiale: " << Entity::getCount() << "\n";
+        std::cout << "Entitati initiale (Static Count): " << Entity::getCount() << "\n";
 
         while (isRunning) {
             level.updateAll();
@@ -259,7 +278,10 @@ public:
             std::cin >> cmd;
 
             try {
+                // Obținem player-ul folosind dynamic_cast din LevelManager
                 Player* p = level.getPlayer();
+
+                // Aruncăm o excepție generică dacă nu găsim player-ul
                 if (!p) throw GameException("Player-ul a murit sau nu exista!");
 
                 switch (cmd) {
@@ -285,11 +307,12 @@ public:
                         std::cout << "Se salveaza jocul...\n";
                         LevelManager savedGame = level; // Test Copy Constructor
                         std::cout << "Joc salvat! Entitati totale in memorie: " << Entity::getCount() << "\n";
-                        break; // Destructorul savedGame se apelează aici
+                        // savedGame se distruge aici, testând Destructorul virtual
+                        break;
                     }
                     case '5':
                         std::cout << "Teleportare riscanta...\n";
-                        p->move(1000, 1000); // Va arunca exceptie
+                        p->move(1000, 1000); // Va arunca OutOfBoundsException
                         break;
                     case '0':
                         isRunning = false;
@@ -305,20 +328,18 @@ public:
                 std::cout << "Se reseteaza pozitia player-ului la centru (50, 50)...\n";
 
                 if (Player* p = level.getPlayer()) {
-                    // Resetăm poziția calculând diferența necesară
-                    // Acum funcționează pentru că avem getPosition()
-                    int currentX = p->getPosition().x;
-                    int currentY = p->getPosition().y;
-                    p->move(50 - currentX, 50 - currentY);
+                    // Calculăm delta pentru a muta înapoi la centru
+                    Position currentPos = p->getPosition();
+                    p->move(50 - currentPos.x, 50 - currentPos.y);
                 }
             }
-            // Catch generic pentru joc
+            // Catch generic pentru logica jocului
             catch (const GameException& e) {
                 std::cout << "\n[EROARE JOC] " << e.what() << "\n";
             }
-            // Catch general
-            catch (...) {
-                std::cout << "\n[EROARE NECUNOSCUTA] Ceva rau s-a intamplat.\n";
+            // Catch general pentru orice altceva (std::exception, etc)
+            catch (const std::exception& e) {
+                std::cout << "\n[EROARE STANDARD] " << e.what() << "\n";
             }
         }
     }
