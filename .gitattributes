@@ -1,2 +1,4 @@
-ext/** linguist-vendored
-* text=auto
+cmake-build-debug/* linguist-vendored
+*.txt linguist-vendored
+*.cmake linguist-vendored
+*.xml linguist-vendored
