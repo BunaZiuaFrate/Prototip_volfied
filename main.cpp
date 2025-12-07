@@ -2,167 +2,205 @@
 #include <vector>
 #include <string>
 #include <exception>
-#include <algorithm> // std::swap
-#include <cstdlib>   // std::rand
-#include <ctime>     // std::time
-#include <memory>    // std::unique_ptr (pentru modern C++, optional dar bun)
+#include <algorithm> // swap
+#include <cstdlib>   // rand
+#include <ctime>     // time
+#include <memory>    // smart pointers (optional, dar bun practice)
 
-// =========================================================
-// 1. MODULE: EXCEPTIONS (Ierarhie proprie)
-// =========================================================
+// ==========================================
+// 0. UTILS & TEMPLATES [TEMA 3]
+// ==========================================
+
+struct Position {
+    int x, y;
+};
+
+// [TEMA 3] Funcție Șablon (Template Function) - Instanțiere 1
+// Verifică dacă o valoare e într-un interval.
+// Utilizare: coordonate (int), timp (float), etc.
+template <typename T>
+bool isWithinBounds(T value, T min, T max) {
+    return (value >= min && value <= max);
+}
+
+// [TEMA 3] Clasă Șablon (Class Template) - Instanțiere 1 & 2
+// O cutie de loot care poate conține orice tip de recompensă
+template <typename T>
+class LootBox {
+    T content;
+    bool opened;
+public:
+    LootBox(T item) : content(item), opened(false) {}
+
+    T open() {
+        if (!opened) {
+            opened = true;
+            std::cout << "[LOOT] Ai deschis o cutie! Continut: " << content << "\n";
+            return content;
+        }
+        // Returnăm o valoare default dacă e deja deschisă (simplificare)
+        return content;
+    }
+
+    bool isOpened() const { return opened; }
+};
+
+// ==========================================
+// 1. DESIGN PATTERNS [TEMA 3]
+// ==========================================
+
+// [TEMA 3] Design Pattern: SINGLETON
+// Gestionăm configurația jocului global
+class GameConfig {
+private:
+    int mapWidth;
+    int mapHeight;
+    int difficulty;
+
+    // Constructor privat
+    GameConfig() : mapWidth(100), mapHeight(100), difficulty(1) {}
+
+public:
+    // Ștergem metodele de copiere pentru a asigura unicitatea
+    GameConfig(const GameConfig&) = delete;
+    GameConfig& operator=(const GameConfig&) = delete;
+
+    // Metoda statică de acces (Meyers Singleton - Thread Safe in C++11)
+    static GameConfig& getInstance() {
+        static GameConfig instance;
+        return instance;
+    }
+
+    int getWidth() const { return mapWidth; }
+    int getHeight() const { return mapHeight; }
+    void setDifficulty(int d) { difficulty = d; }
+    int getDifficulty() const { return difficulty; }
+};
+
+// ==========================================
+// 2. IERARHIE DE EXCEPȚII
+// ==========================================
 
 class GameException : public std::exception {
 protected:
     std::string message;
 public:
     explicit GameException(const std::string& msg) : message(msg) {}
-    virtual const char* what() const noexcept override {
-        return message.c_str();
-    }
+    virtual const char* what() const noexcept override { return message.c_str(); }
 };
 
 class OutOfBoundsException : public GameException {
 public:
-    explicit OutOfBoundsException(const std::string& entity)
-        : GameException("[CRITICAL] " + entity + " a incercat sa iasa din harta!") {}
+    explicit OutOfBoundsException(const std::string& name)
+        : GameException("CRITIC: " + name + " a incercat sa iasa din harta!") {}
 };
 
 class InvalidActionException : public GameException {
 public:
-    InvalidActionException() : GameException("[ERROR] Actiune invalida in acest context.") {}
+    InvalidActionException() : GameException("Actiune invalida! Comanda necunoscuta.") {}
 };
 
-// =========================================================
-// 2. MODULE: UTILS (Structuri ajutatoare)
-// =========================================================
-
-struct Coordinates {
-    int x;
-    int y;
-
-    bool operator==(const Coordinates& other) const {
-        return x == other.x && y == other.y;
-    }
-};
-
-// =========================================================
-// 3. MODULE: ENTITIES (Clasa de baza abstracta)
-// =========================================================
+// ==========================================
+// 3. IERARHIE DE CLASE (ENTITĂȚI)
+// ==========================================
 
 class Entity {
 protected:
+    int x, y;
     std::string name;
-    Coordinates position;
-
-    // [STATIC] Contor pentru a demonstra cate obiecte sunt in memorie
-    static int globalEntityCount;
+    static int entityCount;
 
 public:
-    Entity(const std::string& n, int x, int y) : name(n), position{x, y} {
-        globalEntityCount++;
+    Entity(const std::string& n, int startX, int startY) : name(n), x(startX), y(startY) {
+        entityCount++;
     }
 
-    // [VIRTUAL] Destructor obligatoriu
-    virtual ~Entity() {
-        globalEntityCount--;
-    }
+    virtual ~Entity() { entityCount--; }
 
-    // [PURE VIRTUAL] Metode ce trebuie implementate
     virtual void update() = 0;
-    virtual void displayStatus(std::ostream& os) const = 0;
-
-    // [VIRTUAL] Clone pattern pentru Deep Copy (Esențial la M2)
+    virtual void printInfo(std::ostream& os) const = 0;
     virtual Entity* clone() const = 0;
 
-    // Getters de nivel inalt
     std::string getName() const { return name; }
-    Coordinates getPosition() const { return position; }
+    int getX() const { return x; }
+    int getY() const { return y; }
 
-    // Static getter
-    static int getCount() { return globalEntityCount; }
+    static int getCount() { return entityCount; }
 
-    // Operator << polimorfic
     friend std::ostream& operator<<(std::ostream& os, const Entity& e) {
-        e.displayStatus(os);
+        e.printInfo(os);
         return os;
     }
 };
 
-int Entity::globalEntityCount = 0;
-
-// =========================================================
-// 4. MODULE: CONCRETE CLASSES (Derivate)
-// =========================================================
+int Entity::entityCount = 0;
 
 // --- PLAYER ---
 class Player : public Entity {
-    int hp;
+    int health;
     int score;
-    bool shieldActive;
-
 public:
-    Player(const std::string& n, int x, int y)
-        : Entity(n, x, y), hp(100), score(0), shieldActive(false) {}
+    Player(const std::string& n, int x, int y) : Entity(n, x, y), health(100), score(0) {}
 
     void update() override {
-        // Logica complexa: Regenerare pasiva sau scadere energie
-        if (hp < 100 && hp > 0) hp++;
+        if (health > 0) health -= 1;
     }
 
-    // Functie specifica Player (Move cu validare)
     void move(int dx, int dy) {
-        int newX = position.x + dx;
-        int newY = position.y + dy;
+        int newX = x + dx;
+        int newY = y + dy;
 
-        // Verificare limite (Arunca exceptie M2)
-        if (newX < 0 || newX > 100 || newY < 0 || newY > 100) {
+        // [TEMA 3] Folosirea Funcției Template (Instanțiere cu int)
+        // Luăm limitele din Singleton
+        int maxX = GameConfig::getInstance().getWidth();
+        int maxY = GameConfig::getInstance().getHeight();
+
+        if (!isWithinBounds<int>(newX, 0, maxX) || !isWithinBounds<int>(newY, 0, maxY)) {
             throw OutOfBoundsException(name);
         }
 
-        position.x = newX;
-        position.y = newY;
-        std::cout << " -> " << name << " s-a mutat la (" << position.x << ", " << position.y << ")\n";
-    }
-
-    // Functie specifica pentru RTTI (Healing)
-    void usePotion() {
-        hp = 100;
-        std::cout << " -> " << name << " a folosit o potiune magica! HP Full.\n";
+        x = newX;
+        y = newY;
+        std::cout << " -> " << name << " s-a mutat la (" << x << "," << y << ").\n";
     }
 
     void addScore(int points) { score += points; }
 
-    void displayStatus(std::ostream& os) const override {
-        os << "[PLAYER] " << name << " | HP:" << hp << " | Score:" << score
-           << " | Pos:(" << position.x << "," << position.y << ")";
+    void heal() {
+        health = 100;
+        std::cout << " -> " << name << " a folosit o potiune! HP Full.\n";
     }
 
-    // Implementare Clone pentru copiere corecta
+    Position getPosition() const { return {x, y}; }
+
+    void printInfo(std::ostream& os) const override {
+        os << "[PLAYER] " << name << " | HP: " << health << " | Score: " << score << " | Pos: " << x << "," << y;
+    }
+
     Entity* clone() const override { return new Player(*this); }
 };
 
 // --- ENEMY ---
 class Enemy : public Entity {
-    int damagePower;
-    std::string type;
-
+    int damage;
 public:
-    Enemy(const std::string& n, int x, int y, int dmg, const std::string& t)
-        : Entity(n, x, y), damagePower(dmg), type(t) {}
+    Enemy(const std::string& n, int x, int y, int dmg) : Entity(n, x, y), damage(dmg) {}
 
     void update() override {
-        // AI Simplu: miscare random
-        int dx = (std::rand() % 3) - 1;
-        int dy = (std::rand() % 3) - 1;
+        // Mișcare simplă random
+        int dx = (rand() % 3) - 1;
+        int dy = (rand() % 3) - 1;
 
-        // Verificare simpla fara exceptii la inamici
-        if (position.x + dx >= 0 && position.x + dx <= 100) position.x += dx;
-        if (position.y + dy >= 0 && position.y + dy <= 100) position.y += dy;
+        int maxX = GameConfig::getInstance().getWidth();
+        int maxY = GameConfig::getInstance().getHeight();
+
+        // Verificăm limitele fără excepție la inamici
+        if (isWithinBounds(x + dx, 0, maxX)) x += dx;
+        if (isWithinBounds(y + dy, 0, maxY)) y += dy;
     }
 
-    void displayStatus(std::ostream& os) const override {
-        os << "[ENEMY-" << type << "] " << name << " | DMG:" << damagePower
-           << " | Pos:(" << position.x << "," << position.y << ")";
+    void printInfo(std::ostream& os) const override {
+        os << "[ENEMY] " << name << " | DMG: " << damage << " | Pos: " << x << "," << y;
     }
 
     Entity* clone() const override { return new Enemy(*this); }
@@ -171,187 +209,203 @@ public:
 // --- OBSTACLE ---
 class Obstacle : public Entity {
     bool destructible;
-
 public:
     Obstacle(int x, int y, bool dest) : Entity("Wall", x, y), destructible(dest) {}
 
-    void update() override {
-        // Obstacolele nu fac nimic la update
-    }
+    void update() override { /* Static */ }
 
-    void displayStatus(std::ostream& os) const override {
-        os << "[OBSTACLE] " << (destructible ? "Breakable" : "Solid")
-           << " Wall at (" << position.x << "," << position.y << ")";
+    void printInfo(std::ostream& os) const override {
+        os << "[OBSTACLE] " << (destructible ? "Destructible" : "Hard") << " Wall at " << x << "," << y;
     }
 
     Entity* clone() const override { return new Obstacle(*this); }
 };
 
-// =========================================================
-// 5. MODULE: GAME MANAGER (Level Class)
-// =========================================================
+// ==========================================
+// 4. DESIGN PATTERN: FACTORY [TEMA 3]
+// ==========================================
 
+enum class EntityType {
+    Player,
+    EnemySparx,
+    EnemyQix,
+    Obstacle
+};
+
+// [TEMA 3] Factory Method Pattern
+// Centralizează crearea obiectelor
+class EntityFactory {
+public:
+    static Entity* createEntity(EntityType type, int x, int y) {
+        switch (type) {
+            case EntityType::Player:
+                return new Player("Hero", x, y);
+            case EntityType::EnemySparx:
+                // Dificultatea din Singleton influențează damage-ul
+                return new Enemy("Sparx", x, y, 10 * GameConfig::getInstance().getDifficulty());
+            case EntityType::EnemyQix:
+                return new Enemy("Qix", x, y, 25 * GameConfig::getInstance().getDifficulty());
+            case EntityType::Obstacle:
+                return new Obstacle(x, y, false);
+            default:
+                throw std::invalid_argument("Tip entitate necunoscut in Factory!");
+        }
+    }
+};
+
+// ==========================================
+// 5. MANAGER (LEVEL)
+// ==========================================
 class LevelManager {
-    // Vector polimorfic de pointeri
     std::vector<Entity*> entities;
 
+    // [TEMA 3] Instanțiere Clasă Template #1 (int)
+    LootBox<int> bonusPointsBox;
+    // [TEMA 3] Instanțiere Clasă Template #2 (string)
+    LootBox<std::string> secretMessageBox;
+
 public:
-    LevelManager() = default;
+    LevelManager() : bonusPointsBox(500), secretMessageBox("Secret: Invinge Qix primul!") {}
 
-    // --- REGULA CELOR 3 (Copy-and-Swap Idiom) ---
-    // Aceasta este partea critica pentru Milestone 2
-
-    // 1. Destructor
     ~LevelManager() {
-        clear();
+        for (auto e : entities) delete e;
+        entities.clear();
     }
 
-    // 2. Copy Constructor (Deep Copy)
-    LevelManager(const LevelManager& other) {
-        for (const auto& entity : other.entities) {
-            entities.push_back(entity->clone()); // Foloseste constructorul virtual
+    LevelManager(const LevelManager& other)
+        : bonusPointsBox(other.bonusPointsBox), secretMessageBox(other.secretMessageBox) {
+        for (const auto& e : other.entities) {
+            entities.push_back(e->clone());
         }
-        std::cout << "[DEBUG] LevelManager copied via Deep Copy.\n";
     }
 
-    // 3. Copy Assignment Operator
     LevelManager& operator=(LevelManager other) {
         std::swap(entities, other.entities);
+        std::swap(bonusPointsBox, other.bonusPointsBox);
+        std::swap(secretMessageBox, other.secretMessageBox);
         return *this;
     }
-    // ---------------------------------------------
 
     void addEntity(Entity* e) {
         entities.push_back(e);
     }
 
-    void clear() {
-        for (auto e : entities) delete e;
-        entities.clear();
-    }
-
     void updateAll() {
-        std::cout << "\n--- Updating Game World ---\n";
+        std::cout << "\n--- Update Frame ---\n";
         for (auto e : entities) {
             e->update();
-            std::cout << *e << "\n"; // Afisare polimorfica
+            std::cout << *e << "\n";
         }
     }
 
-    // Functie helper pentru a gasi Player-ul (RTTI - dynamic_cast)
     Player* getPlayer() {
         for (auto e : entities) {
-            if (auto p = dynamic_cast<Player*>(e)) {
-                return p;
-            }
+            if (Player* p = dynamic_cast<Player*>(e)) return p;
         }
         return nullptr;
     }
 
-    int getEntityCount() const { return entities.size(); }
+    // Funcție demo pentru Template Class
+    void openLootBox() {
+        if (Player* p = getPlayer()) {
+            // Deschidem cutia cu int
+            int points = bonusPointsBox.open();
+            p->addScore(points);
+
+            // Deschidem cutia cu string
+            std::string msg = secretMessageBox.open();
+            std::cout << "Mesaj descifrat: " << msg << "\n";
+        }
+    }
 };
 
-// =========================================================
-// 6. MODULE: MAIN APPLICATION LOGIC
-// =========================================================
-
-class GameApplication {
-    LevelManager currentLevel;
+// ==========================================
+// 6. MAIN APP
+// ==========================================
+class GameApp {
+    LevelManager level;
     bool isRunning;
 
-    void initLevel() {
-        // Aici se creeaza entitatile (expandable catre Factory Pattern la M3)
-        currentLevel.addEntity(new Player("Hero", 50, 50));
-        currentLevel.addEntity(new Enemy("Sparx", 10, 10, 20, "Fast"));
-        currentLevel.addEntity(new Enemy("Qix", 80, 80, 50, "Boss"));
-        currentLevel.addEntity(new Obstacle(20, 20, false));
-        currentLevel.addEntity(new Obstacle(25, 25, true));
+public:
+    GameApp() : isRunning(true) {
+        srand(time(nullptr));
+
+        // Setare dificultate via Singleton
+        GameConfig::getInstance().setDifficulty(2);
+
+        // [TEMA 3] Folosire Factory pentru populare
+        level.addEntity(EntityFactory::createEntity(EntityType::Player, 50, 50));
+        level.addEntity(EntityFactory::createEntity(EntityType::EnemySparx, 10, 10));
+        level.addEntity(EntityFactory::createEntity(EntityType::EnemyQix, 80, 80));
+        level.addEntity(EntityFactory::createEntity(EntityType::Obstacle, 20, 20));
     }
 
     void showMenu() {
-        std::cout << "\n==============================\n";
-        std::cout << "   VOLFIED REMASTERED (C++)   \n";
-        std::cout << "==============================\n";
-        std::cout << "1. Move Player (WASD)\n";
-        std::cout << "2. Wait (Regenerate HP)\n";
-        std::cout << "3. Use Potion (Heal)\n";
-        std::cout << "4. Save Game (Test Deep Copy)\n";
-        std::cout << "5. Test Crash (Exception)\n";
+        std::cout << "\n=== VOLFIED (M3) ===\n";
+        std::cout << "1. Misca Player\n";
+        std::cout << "2. Asteapta\n";
+        std::cout << "3. Heal\n";
+        std::cout << "4. Save Game (Copy)\n";
+        std::cout << "5. Test OutOfBounds\n";
+        std::cout << "6. Deschide Loot Box [TEMA 3]\n";
         std::cout << "0. Exit\n";
-        std::cout << "> ";
-    }
-
-public:
-    GameApplication() : isRunning(true) {
-        std::srand(static_cast<unsigned>(std::time(nullptr)));
-        initLevel();
+        std::cout << "Cmd: ";
     }
 
     void run() {
-        std::cout << "System initialized. Active Objects: " << Entity::getCount() << "\n";
+        std::cout << "Start Game. Entities: " << Entity::getCount() << "\n";
+        std::cout << "Map Size (Singleton): " << GameConfig::getInstance().getWidth() << "x" << GameConfig::getInstance().getHeight() << "\n";
 
         while (isRunning) {
-            currentLevel.updateAll();
+            level.updateAll();
             showMenu();
 
             char cmd;
             std::cin >> cmd;
 
             try {
-                Player* p = currentLevel.getPlayer();
-                if (!p) throw GameException("Player entity missing from level!");
+                Player* p = level.getPlayer();
+                if (!p) throw GameException("Player missing!");
 
                 switch (cmd) {
                     case '1': {
-                        std::cout << "Direction (w/a/s/d): ";
-                        char dir;
-                        std::cin >> dir;
+                        std::cout << "Dir (w/a/s/d): ";
+                        char dir; std::cin >> dir;
                         if (dir == 'w') p->move(0, -10);
                         else if (dir == 's') p->move(0, 10);
                         else if (dir == 'a') p->move(-10, 0);
                         else if (dir == 'd') p->move(10, 0);
-                        else std::cout << "Invalid direction.\n";
+                        else std::cout << "Invalid dir.\n";
                         break;
                     }
-                    case '2':
-                        std::cout << "Waiting...\n";
-                        p->addScore(5);
-                        break;
-                    case '3':
-                        p->usePotion();
-                        break;
+                    case '2': std::cout << "Wait...\n"; p->addScore(10); break;
+                    case '3': p->heal(); break;
                     case '4': {
-                        std::cout << "Creating SavePoint...\n";
-                        LevelManager backup = currentLevel; // Test Copy Ctor
-                        std::cout << "SavePoint Created! (Objects in RAM doubled: " << Entity::getCount() << ")\n";
-                        // Backup is destroyed here (Test Destructor)
+                        LevelManager saved = level;
+                        std::cout << "Game Saved! (Entities in RAM: " << Entity::getCount() << ")\n";
                         break;
                     }
-                    case '5':
-                        std::cout << "Teleporting to void...\n";
-                        p->move(1000, 1000); // Throws OutOfBoundsException
+                    case '5': p->move(1000, 1000); break;
+                    case '6':
+                        // Testam LootBox (Template Class)
+                        level.openLootBox();
                         break;
-                    case '0':
-                        isRunning = false;
-                        std::cout << "Exiting game.\n";
-                        break;
-                    default:
-                        throw InvalidActionException();
+                    case '0': isRunning = false; break;
+                    default: throw InvalidActionException();
                 }
             }
             catch (const OutOfBoundsException& e) {
-                std::cerr << "\n!!! GAME OVER PREVENTION !!!\n" << e.what() << "\n";
-                std::cout << "Reseting player to safe zone...\n";
-                if (Player* p = currentLevel.getPlayer()) {
-                    Coordinates pos = p->getPosition();
-                    p->move(50 - pos.x, 50 - pos.y); // Move back to center
+                std::cout << "\n[GAME OVER] " << e.what() << "\nResetting player...\n";
+                if (Player* p = level.getPlayer()) {
+                    Position pos = p->getPosition();
+                    p->move(50 - pos.x, 50 - pos.y);
                 }
             }
             catch (const GameException& e) {
-                std::cerr << "\n[GAME ERROR]: " << e.what() << "\n";
+                std::cout << "\n[ERROR] " << e.what() << "\n";
             }
             catch (const std::exception& e) {
-                std::cerr << "\n[SYSTEM ERROR]: " << e.what() << "\n";
+                std::cout << "\n[STD ERROR] " << e.what() << "\n";
             }
         }
     }
@@ -359,11 +413,11 @@ public:
 
 int main() {
     try {
-        GameApp app; // Alias pt GameApplication ca sa fie mai scurt in main
+        GameApp app;
         app.run();
     } catch (...) {
-        std::cerr << "Fatal unhandled error.\n";
-        return -1;
+        std::cerr << "Fatal Crash.\n";
+        return 1;
     }
     return 0;
 }
