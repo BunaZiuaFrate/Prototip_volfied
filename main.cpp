@@ -30,15 +30,13 @@ public:
 };
 
 // ==========================================
-// 2. CLASA ABSTRACTĂ DE BAZĂ [CERINȚĂ TEMA 2]
+// 2. CLASA ABSTRACTĂ DE BAZĂ
 // ==========================================
 
 class Entity {
 protected:
     int x, y;
     std::string name;
-
-    // [STATIC] Contor pentru a demonstra cate obiecte sunt in memorie
     static int entityCount;
 
 public:
@@ -46,7 +44,7 @@ public:
         entityCount++;
     }
 
-    // [VIRTUAL] Destructor - Obligatoriu pentru ca vom sterge prin pointeri de baza
+    // [VIRTUAL] Destructor
     virtual ~Entity() {
         entityCount--;
     }
@@ -55,7 +53,7 @@ public:
     virtual void update() = 0;
     virtual void printInfo(std::ostream& os) const = 0;
 
-    // [VIRTUAL] Clone Pattern - Esențial pentru Deep Copy la Tema 2
+    // [VIRTUAL] Clone pentru Deep Copy
     virtual Entity* clone() const = 0;
 
     std::string getName() const { return name; }
@@ -76,7 +74,9 @@ int Entity::entityCount = 0;
 // 3. CLASE DERIVATE
 // ==========================================
 
-// --- PLAYER ---
+// Structura ajutatoare pentru pozitie (Repara eroarea getPosition)
+struct Point { int x, y; };
+
 class Player : public Entity {
     int health;
     int score;
@@ -91,7 +91,7 @@ public:
         int newX = x + dx;
         int newY = y + dy;
 
-        // Verificare limite (Hardcodat 100x100 pentru Tema 2)
+        // Verificare limite (100x100)
         if (newX < 0 || newX > 100 || newY < 0 || newY > 100) {
             throw OutOfBoundsException(name);
         }
@@ -108,19 +108,16 @@ public:
         std::cout << " -> " << name << " a folosit o potiune! HP Full.\n";
     }
 
-    // Structura ajutatoare pentru pozitie
-    struct Pos { int x, y; };
-    Pos getPosition() const { return {x, y}; }
+    // [FIX] Metoda care lipsea și cauza eroarea de compilare
+    Point getPosition() const { return {x, y}; }
 
     void printInfo(std::ostream& os) const override {
         os << "[PLAYER] " << name << " | HP: " << health << " | Score: " << score << " | Pos: " << x << "," << y;
     }
 
-    // Returnam raw pointer (new)
     Entity* clone() const override { return new Player(*this); }
 };
 
-// --- ENEMY ---
 class Enemy : public Entity {
     int damage;
 public:
@@ -130,7 +127,6 @@ public:
         int dx = (rand() % 3) - 1;
         int dy = (rand() % 3) - 1;
 
-        // Verificare simpla fara exceptii
         if (x + dx >= 0 && x + dx <= 100) x += dx;
         if (y + dy >= 0 && y + dy <= 100) y += dy;
     }
@@ -142,7 +138,6 @@ public:
     Entity* clone() const override { return new Enemy(*this); }
 };
 
-// --- OBSTACLE ---
 class Obstacle : public Entity {
     bool destructible;
 public:
@@ -158,38 +153,33 @@ public:
 };
 
 // ==========================================
-// 4. MANAGER (REGULA CELOR 3) [CERINȚĂ TEMA 1/2]
+// 4. MANAGER (REGULA CELOR 3)
 // ==========================================
 
 class LevelManager {
-    // Vector de pointeri RAW (trebuie gestionați manual)
     std::vector<Entity*> entities;
 
 public:
     LevelManager() = default;
-
-    // --- REGULA CELOR 3 (OBLIGATORIE AICI) ---
 
     // 1. Destructor
     ~LevelManager() {
         clear();
     }
 
-    // 2. Copy Constructor (Deep Copy)
+    // 2. Copy Constructor
     LevelManager(const LevelManager& other) {
         for (const auto& e : other.entities) {
-            // Aici folosim functia virtuala clone() pentru a copia tipul corect
             entities.push_back(e->clone());
         }
-        std::cout << "[DEBUG] LevelManager Deep Copy performed.\n";
+        std::cout << "[DEBUG] LevelManager Deep Copy.\n";
     }
 
-    // 3. Copy Assignment Operator (Copy-and-Swap Idiom)
+    // 3. Assignment Operator
     LevelManager& operator=(LevelManager other) {
         std::swap(entities, other.entities);
         return *this;
     }
-    // ------------------------------------------
 
     void addEntity(Entity* e) {
         entities.push_back(e);
@@ -203,17 +193,14 @@ public:
     void updateAll() {
         std::cout << "\n--- Update Frame ---\n";
         for (auto e : entities) {
-            e->update(); // Polimorfism
+            e->update();
             std::cout << *e << "\n";
         }
     }
 
-    // Funcție RTTI (dynamic_cast)
     Player* getPlayer() {
         for (auto e : entities) {
-            if (Player* p = dynamic_cast<Player*>(e)) {
-                return p;
-            }
+            if (Player* p = dynamic_cast<Player*>(e)) return p;
         }
         return nullptr;
     }
@@ -230,8 +217,6 @@ class GameApp {
 public:
     GameApp() : isRunning(true) {
         srand(time(nullptr));
-
-        // [TEMA 2] Creare manuală cu new (fără Factory)
         level.addEntity(new Player("Hero", 50, 50));
         level.addEntity(new Enemy("Sparx", 10, 10, 20));
         level.addEntity(new Enemy("Qix", 80, 80, 50));
@@ -239,14 +224,8 @@ public:
     }
 
     void showMenu() {
-        std::cout << "\n=== VOLFIED (M1 & M2) ===\n";
-        std::cout << "1. Misca Player\n";
-        std::cout << "2. Asteapta\n";
-        std::cout << "3. Heal\n";
-        std::cout << "4. Save Game (Test Deep Copy)\n";
-        std::cout << "5. Test Error (Exception)\n";
-        std::cout << "0. Exit\n";
-        std::cout << "Cmd: ";
+        std::cout << "\n=== VOLFIED (M2) ===\n";
+        std::cout << "1. Misca Player\n2. Asteapta\n3. Heal\n4. Save Game\n5. Test Error\n0. Exit\nCmd: ";
     }
 
     void run() {
@@ -255,6 +234,7 @@ public:
             showMenu();
 
             char cmd;
+            // [CRITIC PENTRU GITHUB] Daca nu mai e input, oprim jocul
             if (!(std::cin >> cmd)) {
                 isRunning = false;
                 break;
@@ -278,10 +258,8 @@ public:
                     case '2': p->addScore(10); break;
                     case '3': p->heal(); break;
                     case '4': {
-                        std::cout << "Saving game...\n";
-                        LevelManager saved = level; // Testam Copy Constructor
-                        std::cout << "Game Saved! (Objects in RAM: " << Entity::getCount() << ")\n";
-                        // 'saved' se distruge aici, testand destructorul
+                        LevelManager saved = level;
+                        std::cout << "Game Saved! (RAM entities: " << Entity::getCount() << ")\n";
                         break;
                     }
                     case '5': p->move(1000, 1000); break;
@@ -292,7 +270,8 @@ public:
             catch (const OutOfBoundsException& e) {
                 std::cout << "\n[GAME OVER] " << e.what() << "\nResetting...\n";
                 if (Player* p = level.getPlayer()) {
-                    auto pos = p->getPosition();
+                    // [FIX] Acum functioneaza pentru ca am definit struct Point si metoda getPosition
+                    Point pos = p->getPosition();
                     p->move(50 - pos.x, 50 - pos.y);
                 }
             }
