@@ -1,5 +1,5 @@
-cmake-build-debug/* linguist-vendored
-.idea/* linguist-vendored
-*.txt linguist-vendored
-*.cmake linguist-vendored
-*.xml linguist-vendored
+cmake-build-debug/
+.idea/
+*.exe
+*.o
+*.obj
