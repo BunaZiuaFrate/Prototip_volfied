@@ -3,5 +3,3 @@ cmake-build-debug/
 *.exe
 *.o
 *.obj
-CMakeLists.txt linguist-vendored
-*.cmake linguist-vendored
