@@ -1,28 +1,28 @@
 #include "GameApp.h"
 #include "GameExceptions.h"
-#include "Player.h" // Avem nevoie de Player pentru cast in meniu
-#include "Enemy.h"
-#include "Obstacle.h"
+#include "EntityFactory.h" // [TEMA 3] Include Factory
+#include "Player.h"
 #include <iostream>
-#include <ctime>    // Pentru time()
+#include <ctime>
 
 GameApp::GameApp() : isRunning(true) {
     std::srand(static_cast<unsigned>(std::time(nullptr)));
 
-    // Initializam nivelul cu entitati
-    level.addEntity(std::make_shared<Player>("Hero", 50, 50));
-    level.addEntity(std::make_shared<Enemy>("Sparx", 10, 10, 10));
-    level.addEntity(std::make_shared<Obstacle>(20, 20, false));
+    // [TEMA 3] Folosim Factory Pattern pentru a crea obiectele
+    level.addEntity(EntityFactory::createEntity(EntityFactory::Type::Player, 50, 50));
+    level.addEntity(EntityFactory::createEntity(EntityFactory::Type::EnemySparx, 10, 10));
+    level.addEntity(EntityFactory::createEntity(EntityFactory::Type::EnemyQix, 80, 80));
+    level.addEntity(EntityFactory::createEntity(EntityFactory::Type::Obstacle, 20, 20));
 }
 
 void GameApp::showMenu() const {
-    std::cout << "\n=== VOLFIED (Modular Version) ===\n";
+    std::cout << "\n=== VOLFIED (M3 - Factory & Templates) ===\n";
     std::cout << "1. Move Player\n";
     std::cout << "2. Wait (Update World)\n";
     std::cout << "3. Special Event (Dynamic Cast)\n";
     std::cout << "4. Save Game (Deep Copy)\n";
     std::cout << "5. Test Error (Exception)\n";
-    std::cout << "6. LootBox (Template)\n";
+    std::cout << "6. LootBox (Template Instantiations)\n";
     std::cout << "0. Exit\n";
     std::cout << "Cmd: ";
 }
@@ -39,7 +39,6 @@ void GameApp::run() {
         }
 
         try {
-            // Obtinem player-ul pentru comenzi directe
             Player* p = level.getPlayerRaw();
             if (!p) throw GameException("Player missing from game!");
 
@@ -62,13 +61,12 @@ void GameApp::run() {
                     level.triggerSpecialEvent();
                     break;
                 case '4': {
-                    // Testam Copy Constructor-ul
                     LevelManager saved = level;
                     std::cout << "Game Saved! (Backup created in memory)\n";
                     break;
                 }
                 case '5':
-                    p->move(1000, 1000); // Arunca OutOfBoundsException
+                    p->move(1000, 1000);
                     break;
                 case '6':
                     level.openLootBox();
@@ -80,10 +78,8 @@ void GameApp::run() {
                     throw InvalidActionException();
             }
         }
-        // [FEEDBACK] Catch-uri specifice
         catch (const OutOfBoundsException& e) {
             std::cout << "\n[EROARE HARTA] " << e.what() << "\n";
-            // Logica de resetare pozitie ar putea fi aici
         }
         catch (const InvalidActionException& e) {
             std::cout << "\n[EROARE INPUT] " << e.what() << "\n";

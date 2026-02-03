@@ -1,11 +1,15 @@
 #include "LevelManager.h"
-#include "Enemy.h" // Necesar pentru dynamic_cast la Enemy
+#include "Enemy.h"
 #include <iostream>
 
-LevelManager::LevelManager() : bonusPointsBox(500) {}
+// Aici initializam ambele template-uri
+LevelManager::LevelManager()
+    : bonusPointsBox(500),
+      secretMessageBox("SECRET: Codul Konami este Sus-Sus-Jos-Jos...") {}
 
 LevelManager::LevelManager(const LevelManager& other)
-    : bonusPointsBox(other.bonusPointsBox) {
+    : bonusPointsBox(other.bonusPointsBox),
+      secretMessageBox(other.secretMessageBox) { // Copiem si cutia noua
     for (const auto& e : other.entities) {
         entities.push_back(e->clone());
     }
@@ -15,6 +19,7 @@ void swap(LevelManager& first, LevelManager& second) {
     using std::swap;
     swap(first.entities, second.entities);
     swap(first.bonusPointsBox, second.bonusPointsBox);
+    swap(first.secretMessageBox, second.secretMessageBox); // Swap si aici
 }
 
 LevelManager& LevelManager::operator=(LevelManager other) {
@@ -34,19 +39,15 @@ void LevelManager::updateAll() {
     }
 }
 
-// [FEEDBACK] Dynamic Cast cu sens
 void LevelManager::triggerSpecialEvent() {
     std::cout << "\n--- SPECIAL EVENT! ---\n";
     for (auto& e : entities) {
-        // Daca e Player, primeste Heal
         if (auto p = std::dynamic_pointer_cast<Player>(e)) {
             p->heal(50);
         }
-        // Daca e Enemy, devine Furios (Enrage)
         else if (auto en = std::dynamic_pointer_cast<Enemy>(e)) {
             en->enrage();
         }
-        // Obstacolele sunt ignorate
     }
     std::cout << "----------------------\n";
 }
@@ -62,7 +63,14 @@ Player* LevelManager::getPlayerRaw() const {
 
 void LevelManager::openLootBox() {
     if (Player* p = getPlayerRaw()) {
+        // Deschidem cutia cu int
         int points = bonusPointsBox.open();
-        p->addScore(points);
+        if (points > 0) p->addScore(points);
+
+        // Deschidem cutia cu string (Demonstratie Template #2)
+        std::string msg = secretMessageBox.open();
+        if (!msg.empty()) {
+             std::cout << "[LORE] " << msg << "\n";
+        }
     }
 }

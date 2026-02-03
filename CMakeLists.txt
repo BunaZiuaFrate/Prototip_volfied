@@ -36,6 +36,8 @@ add_executable(${MAIN_EXECUTABLE_NAME}
         Obstacle.h
         Utils.h
         GameExceptions.h
+        EntityFactory.h
+        EntityFactory.cpp
 )
 
 ###############################################################################

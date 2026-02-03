@@ -3,27 +3,29 @@
 
 #include <vector>
 #include <memory>
+#include <string> // Necesara pentru string
 #include "Entity.h"
 #include "Player.h"
 #include "Utils.h"
 
 class LevelManager {
-    // [FEEDBACK] Smart Pointers in vector
     std::vector<std::shared_ptr<Entity>> entities;
+
+    // [CERINTA TEMA 3] Template Class - Instantierea 1 (int)
     LootBox<int> bonusPointsBox;
+
+    // [CERINTA TEMA 3] Template Class - Instantierea 2 (string)
+    LootBox<std::string> secretMessageBox;
 
 public:
     LevelManager();
-    ~LevelManager() = default; // Smart pointers curata automat memoria
+    ~LevelManager() = default;
 
-    // Copy Constructor (Deep Copy)
     LevelManager(const LevelManager& other);
     LevelManager& operator=(LevelManager other);
 
     void addEntity(const std::shared_ptr<Entity>& e);
     void updateAll();
-
-    // [FEEDBACK] Functie care foloseste dynamic_cast cu un scop real
     void triggerSpecialEvent();
 
     Player* getPlayerRaw() const;
