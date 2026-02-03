@@ -54,5 +54,4 @@ if(APPLE)
 endif()
 
 # COPIEREA FISIERULUI DE INPUT PENTRU TESTE
-# Aceasta linie este critica pentru ca testele Github sa nu dea TimeOut!
 copy_files(FILES tastatura.txt COPY_TO_DESTINATION TARGET_NAME ${MAIN_EXECUTABLE_NAME})
