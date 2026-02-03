@@ -1,6 +1,5 @@
 #include "Entity.h"
 
-// Initializare membru static
 int Entity::entityCount = 0;
 
 Entity::Entity(const std::string& n, int startX, int startY) 

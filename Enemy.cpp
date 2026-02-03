@@ -1,19 +1,29 @@
 #include "Enemy.h"
+#include "Utils.h"
 #include <cstdlib> // rand
 
-Enemy::Enemy(const std::string& n, int x, int y, int dmg) 
+Enemy::Enemy(const std::string& n, int x, int y, int dmg)
     : Entity(n, x, y), damage(dmg) {}
 
 void Enemy::update() {
+    // Miscare aleatoare
     int dx = (rand() % 3) - 1;
     int dy = (rand() % 3) - 1;
-    
-    if (x + dx >= 0 && x + dx <= 100) x += dx;
-    if (y + dy >= 0 && y + dy <= 100) y += dy;
+    const auto& config = GameConfig::getInstance();
+
+    if (isWithinBounds(x + dx, 0, config.getWidth())) x += dx;
+    if (isWithinBounds(y + dy, 0, config.getHeight())) y += dy;
+}
+
+void Enemy::enrage() {
+    damage += 10;
+    std::cout << " -> " << name << " este FURIOS! Damage crescut la " << damage << "\n";
 }
 
 void Enemy::printInfo(std::ostream& os) const {
     os << "[ENEMY] " << name << " | DMG: " << damage << " | Pos: " << x << "," << y;
 }
 
-Entity* Enemy::clone() const { return new Enemy(*this); }
+std::shared_ptr<Entity> Enemy::clone() const {
+    return std::make_shared<Enemy>(*this);
+}
