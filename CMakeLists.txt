@@ -23,20 +23,20 @@ include(cmake/CopyHelper.cmake)
 add_executable(${MAIN_EXECUTABLE_NAME}
         main.cpp
         GameApp.cpp
-        GameApp.h
+        Headers/GameApp.h
         LevelManager.cpp
-        LevelManager.h
-        Entity.cpp
-        Entity.h
+        Headers/LevelManager.h
+        Source/Entity.cpp
+        Headers/Entity.h
         Player.cpp
-        Player.h
+        Headers/Player.h
         Enemy.cpp
-        Enemy.h
+        Headers/Enemy.h
         Obstacle.cpp
-        Obstacle.h
-        Utils.h
-        GameExceptions.h
-        EntityFactory.h
+        Headers/Obstacle.h
+        Headers/Utils.h
+        Headers/GameExceptions.h
+        Headers/EntityFactory.h
         EntityFactory.cpp
 )
 

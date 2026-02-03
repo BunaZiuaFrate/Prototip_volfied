@@ -1,5 +1,5 @@
-#include "Enemy.h"
-#include "Utils.h"
+#include "../Headers/Enemy.h"
+#include "../Headers/Utils.h"
 #include <cstdlib> // rand
 
 Enemy::Enemy(const std::string& n, int x, int y, int dmg)

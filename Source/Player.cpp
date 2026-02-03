@@ -1,5 +1,5 @@
-#include "Player.h"
-#include "GameExceptions.h"
+#include "../Headers/Player.h"
+#include "../Headers/GameExceptions.h"
 
 Player::Player(const std::string& n, int x, int y)
     : Entity(n, x, y), health(100), score(0) {}

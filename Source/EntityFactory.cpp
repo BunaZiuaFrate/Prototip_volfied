@@ -1,8 +1,8 @@
-#include "EntityFactory.h"
+#include "../Headers/EntityFactory.h"
 #include "Player.h"
-#include "Enemy.h"
-#include "Obstacle.h"
-#include "Utils.h"
+#include "../Headers/Enemy.h"
+#include "../Headers/Obstacle.h"
+#include "../Headers/Utils.h"
 #include <stdexcept>
 
 std::shared_ptr<Entity> EntityFactory::createEntity(Type type, int x, int y) {

@@ -1,7 +1,7 @@
-#include "GameApp.h"
-#include "GameExceptions.h"
+#include "../Headers/GameApp.h"
+#include "../Headers/GameExceptions.h"
 #include "EntityFactory.h" // [TEMA 3] Include Factory
-#include "Player.h"
+#include "../Headers/Player.h"
 #include <iostream>
 #include <ctime>
 

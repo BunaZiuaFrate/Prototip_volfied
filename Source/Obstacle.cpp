@@ -1,4 +1,4 @@
-#include "Obstacle.h"
+#include "../Headers/Obstacle.h"
 
 Obstacle::Obstacle(int x, int y, bool dest) 
     : Entity("Wall", x, y), destructible(dest) {}

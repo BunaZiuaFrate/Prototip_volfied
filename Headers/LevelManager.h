@@ -6,7 +6,7 @@
 #include <string> // Necesara pentru string
 #include "Entity.h"
 #include "Player.h"
-#include "Utils.h"
+#include "../Utils.h"
 
 class LevelManager {
     std::vector<std::shared_ptr<Entity>> entities;

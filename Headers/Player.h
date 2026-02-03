@@ -2,7 +2,7 @@
 #define PLAYER_H
 
 #include "Entity.h"
-#include "Utils.h" // Pentru Position
+#include "../Utils.h"
 
 class Player : public Entity {
     int health;
